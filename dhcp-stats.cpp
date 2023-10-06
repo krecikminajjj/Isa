@@ -7,12 +7,14 @@
 #include <getopt.h>
 #include <signal.h>
 
+pcap_t *descr;
+
 // Handling CTRL + C
 void signal_handler(int signum)
 {
     (void)signum;
     printf("Closing... \n");
-    // pcap_close(descr);
+    pcap_close(descr);
     exit(0);
 }
 
@@ -75,21 +77,36 @@ int check_args(int argc, char **argv, std::string &pcapFile, std::string &interf
 void callback(u_char *args, const struct pcap_pkthdr *header, const u_char *packet)
 {
     (void)args;
-    (void)packet;
-    std::cout << "Captured packet of length " << header->len << std::endl;
+    
+    // Skip the Ethernet, IP, and UDP headers to get to DHCP
+    const uint8_t *dhcp_data = packet + 14 + 20 + 8;
+
+    // Now extract yiaddr
+    const uint8_t *yiaddr_ptr = dhcp_data + 16;
+
+    std::cout << "yiaddr: ";
+    for (int i = 0; i < 4; ++i) {
+        std::cout << static_cast<int>(yiaddr_ptr[i]);
+        if (i < 3) std::cout << ".";
+    }
+    std::cout << std::endl;
 }
 
 
+struct prefixinfo {
+    std::string prefix;
+    int max_hosts;
+    int current_hosts;
+};
 
 
+bool address_belongs_to_prefix() {
 
+}
 
+void percentage_capacity() {
 
-
-
-
-
-
+}
 
 
 int main(int argc, char **argv)
@@ -102,7 +119,7 @@ int main(int argc, char **argv)
     bpf_u_int32 pMask;
     bpf_u_int32 pNet;
     struct bpf_program fp;
-    pcap_t *descr;
+    
     char errbuf[PCAP_ERRBUF_SIZE];
     int arguments = 0;
 
