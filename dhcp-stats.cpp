@@ -5,9 +5,15 @@
 #include <iostream>
 #include <signal.h>
 #include <getopt.h>
-#include <signal.h>
+#include <ncurses.h>
+#include <algorithm>
+#include <string.h>
+
+#include "prefix.h"
 
 pcap_t *descr;
+std::vector<Prefix> ip_prefixes;
+std::vector<std::string> seen_ips;
 
 // Handling CTRL + C
 void signal_handler(int signum)
@@ -18,7 +24,7 @@ void signal_handler(int signum)
     exit(0);
 }
 
-int check_args(int argc, char **argv, std::string &pcapFile, std::string &interface, std::vector<std::string> &ip_prefixes)
+int check_args(int argc, char **argv, std::string &pcap_file, std::string &interface, std::vector<std::string> &ip_prefixes)
 {
     int opt;
 
@@ -29,7 +35,21 @@ int check_args(int argc, char **argv, std::string &pcapFile, std::string &interf
         case 'r':
             if (optarg)
             {
-                pcapFile = std::string(optarg);
+                pcap_file = std::string(optarg);
+                while (optind < argc && argv[optind][0] != '-')
+                {
+                    ip_prefixes.push_back(std::string(argv[optind]));
+                    optind++;
+                    if (optind >= argc)
+                    {
+                        break;
+                    }
+                }
+                if (ip_prefixes.empty())
+                {
+                    std::cerr << "Error: IP addresses must follow the interface argument." << std::endl;
+                    return -1;
+                }
             }
             else
             {
@@ -77,43 +97,43 @@ int check_args(int argc, char **argv, std::string &pcapFile, std::string &interf
 void callback(u_char *args, const struct pcap_pkthdr *header, const u_char *packet)
 {
     (void)args;
+    (void)header;
     
     // Skip the Ethernet, IP, and UDP headers to get to DHCP
     const uint8_t *dhcp_data = packet + 14 + 20 + 8;
 
     // Now extract yiaddr
     const uint8_t *yiaddr_ptr = dhcp_data + 16;
-
-    std::cout << "yiaddr: ";
+    
+    std::string yiaddr_str;
     for (int i = 0; i < 4; ++i) {
-        std::cout << static_cast<int>(yiaddr_ptr[i]);
-        if (i < 3) std::cout << ".";
+        yiaddr_str += std::to_string(yiaddr_ptr[i]);  // Convert the byte to a string
+        if (i < 3) {
+            yiaddr_str += ".";  // Insert dot between octets
+        }
     }
-    std::cout << std::endl;
+
+    std::cout << yiaddr_str << std::endl;
+
+    if (std::find(seen_ips.begin(),seen_ips.end(), yiaddr_str) == seen_ips.end()) {
+        seen_ips.push_back(yiaddr_str);
+        for (auto& prefix : ip_prefixes) {
+            if (prefix.ip_belongs(yiaddr_str)) {
+                prefix.increment_host_count();
+                std::cout << "IP " << yiaddr_str << " belongs to prefix " << prefix.get_ip_address() << "/" << prefix.get_prefix_length() << std::endl;
+                std::cout << "Usage for this prefix: " << prefix.usage() * 100 << "%" << std::endl;
+                break; // Exit loop once we find the matching prefix
+            }
+        }
+    } 
+    
 }
-
-
-struct prefixinfo {
-    std::string prefix;
-    int max_hosts;
-    int current_hosts;
-};
-
-
-bool address_belongs_to_prefix() {
-
-}
-
-void percentage_capacity() {
-
-}
-
 
 int main(int argc, char **argv)
 {
-    std::string pcapFile;
+    std::string pcap_file;
     std::string interface;
-    std::vector<std::string> ip_prefixes;
+    std::vector<std::string> ip_prefixes_vec;
     pcap_if_t *alldevs, *device;
     pcap_if_t *interface_select = NULL;
     bpf_u_int32 pMask;
@@ -121,11 +141,11 @@ int main(int argc, char **argv)
     struct bpf_program fp;
     
     char errbuf[PCAP_ERRBUF_SIZE];
-    int arguments = 0;
+    int arguments = 0;    
 
     if (argc > 1)
     {
-        arguments = check_args(argc, argv, pcapFile, interface, ip_prefixes);
+        arguments = check_args(argc, argv, pcap_file, interface, ip_prefixes_vec);
     }
     else
     {
@@ -139,71 +159,83 @@ int main(int argc, char **argv)
         exit(0);
     }
 
-    std::cout << "Interface: " << interface << std::endl;
-
-    for (const auto &ip : ip_prefixes)
+    for (const auto &ip : ip_prefixes_vec)
     {
-        std::cout << ip << std::endl;
+        ip_prefixes.emplace_back(ip);
     }
 
     // Handling CTRL + C
     signal(SIGINT, signal_handler);
 
-    // this part is inspired by https://www.thegeekstuff.com/2012/10/packet-sniffing-using-libpcap/
-    if (pcap_findalldevs(&alldevs, errbuf) == PCAP_ERROR)
-    {
-        fprintf(stderr, "Error finding interface: %s\n", errbuf);
-        exit(1);
-    }
-
-    // check if user selected a valid interface
-    bool isInterfaceValid = false;
-    for (device = alldevs; device; device = device->next)
-    {
-        if (interface == device->name)
+   
+    if (strcmp(argv[1], "-i") == 0) {
+        // this part is inspired by https://www.thegeekstuff.com/2012/10/packet-sniffing-using-libpcap/
+        if (pcap_findalldevs(&alldevs, errbuf) == PCAP_ERROR)
         {
-            isInterfaceValid = true;
-            interface_select = device;
-            break;
+            fprintf(stderr, "Error finding interface: %s\n", errbuf);
+            exit(1);
         }
-    }
 
-    // if no selected interface was valid print a list of all avaible interfaces
-    if (!isInterfaceValid)
-    {
-        std::cerr << "Invalid interface: " << interface << std::endl;
-        std::cerr << "Available interfaces are: " << std::endl;
-
+        // check if user selected a valid interface
+        bool is_interface_valid = false;
         for (device = alldevs; device; device = device->next)
         {
-            std::cerr << device->name << std::endl;
+            if (interface == device->name)
+            {
+                is_interface_valid = true;
+                interface_select = device;
+                break;
+            }
         }
+
+        // if no selected interface was valid print a list of all avaible interfaces
+        if (!is_interface_valid)
+        {
+            std::cerr << "Invalid interface: " << interface << std::endl;
+            std::cerr << "Available interfaces are: " << std::endl;
+
+            for (device = alldevs; device; device = device->next)
+            {
+                std::cerr << device->name << std::endl;
+            }
+            pcap_freealldevs(alldevs);
+            return 1;
+        }
+        
+        if (pcap_lookupnet(interface_select->name, &pNet, &pMask, errbuf) == PCAP_ERROR)
+        {
+            pMask = 0;
+            pNet = 0;
+        }
+        descr = pcap_open_live(interface_select->name, BUFSIZ, 1, 1000, errbuf);
+
         pcap_freealldevs(alldevs);
-        return 1;
+
+        if (descr == NULL)
+        {
+            pcap_close(descr);
+            fprintf(stderr, "pcap_open_live() failed due to [%s]\n", errbuf);
+            exit(1);
+        }
+    }
+    else {
+        pcap_file = argv[2];
+
+        if (!pcap_file.empty()){
+            descr = pcap_open_offline(pcap_file.c_str(),errbuf);
+        } else {
+            std::cerr << "Empty pcap file" << errbuf << std::endl;
+            return -1;
+        }
+
+        if (descr == NULL) 
+        {
+            std::cerr << "Error opening device: " << errbuf << std::endl;
+            return -1;
+        }
+        
     }
     
-    if (pcap_lookupnet(interface_select->name, &pNet, &pMask, errbuf) == PCAP_ERROR)
-    {
-        pMask = 0;
-        pNet = 0;
-    }
-
-    descr = pcap_open_live(interface_select->name, BUFSIZ, 1, 1000, errbuf);
-    
-    if (descr == NULL) 
-    {
-        std::cerr << "Error opening device: " << errbuf << std::endl;
-        return -1;
-    }
-
-    pcap_freealldevs(alldevs);
-
-    if (descr == NULL)
-    {
-        pcap_close(descr);
-        fprintf(stderr, "pcap_open_live() failed due to [%s]\n", errbuf);
-        exit(1);
-    }
     
     if (pcap_datalink(descr) != DLT_EN10MB)
     {
@@ -229,7 +261,7 @@ int main(int argc, char **argv)
         fprintf(stderr, "pcap_setfilter() failed\n");
         exit(1);
     }
-
+    
     if (pcap_loop(descr, 0, callback, NULL) == -1)
     {
         pcap_freecode(&fp);

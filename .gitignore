@@ -1,6 +1,12 @@
 # binaries
 
 dhcp-stats
+dhcp-stats.o
+prefix.o
+
+#pcap files
+
+dhcp.pcap
 
 #vscode files
 
