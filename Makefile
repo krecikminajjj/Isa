@@ -1,6 +1,6 @@
 CXX=g++
 CXXFLAGS=-std=c++11 -g -pedantic -Wall -Wextra -Werror
-LDFLAGS=-lpcap
+LDFLAGS=-lpcap -lncurses
 TARGET=dhcp-stats
 FILES=dhcp-stats.cpp prefix.cpp
 OBJFILES=$(FILES:.cpp=.o)

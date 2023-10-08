@@ -8,6 +8,8 @@
 #include <ncurses.h>
 #include <algorithm>
 #include <string.h>
+#include <syslog.h>
+#include <map>
 
 #include "prefix.h"
 
@@ -21,6 +23,8 @@ void signal_handler(int signum)
     (void)signum;
     printf("Closing... \n");
     pcap_close(descr);
+    endwin();
+    closelog();
     exit(0);
 }
 
@@ -48,12 +52,12 @@ int check_args(int argc, char **argv, std::string &pcap_file, std::string &inter
                 if (ip_prefixes.empty())
                 {
                     std::cerr << "Error: IP addresses must follow the interface argument." << std::endl;
-                    return -1;
+                    return 1;
                 }
             }
             else
             {
-                return -1;
+                return 1;
             }
             break;
         case 'i':
@@ -64,20 +68,20 @@ int check_args(int argc, char **argv, std::string &pcap_file, std::string &inter
                 {
                     ip_prefixes.push_back(std::string(argv[optind]));
                     optind++;
-                     if (optind >= argc)
-                     {
+                    if (optind >= argc)
+                    {
                         break;
-                     }
+                    }
                 }
                 if (ip_prefixes.empty())
                 {
                     std::cerr << "Error: IP addresses must follow the interface argument." << std::endl;
-                    return -1;
+                    return 1;
                 }
             }
             else
             {
-                return -1;
+                return 1;
             }
             break;
         case 'h':
@@ -88,7 +92,7 @@ int check_args(int argc, char **argv, std::string &pcap_file, std::string &inter
             exit(0); // Exit the program after showing help
         default:
             std::cerr << "Error: IP addresses must follow the interface argument." << std::endl;
-            return -1;
+            return 1;
         }
     }
     return 0;
@@ -98,35 +102,58 @@ void callback(u_char *args, const struct pcap_pkthdr *header, const u_char *pack
 {
     (void)args;
     (void)header;
-    
+
     // Skip the Ethernet, IP, and UDP headers to get to DHCP
     const uint8_t *dhcp_data = packet + 14 + 20 + 8;
 
     // Now extract yiaddr
     const uint8_t *yiaddr_ptr = dhcp_data + 16;
-    
+
     std::string yiaddr_str;
-    for (int i = 0; i < 4; ++i) {
-        yiaddr_str += std::to_string(yiaddr_ptr[i]);  // Convert the byte to a string
-        if (i < 3) {
-            yiaddr_str += ".";  // Insert dot between octets
+    for (int i = 0; i < 4; ++i)
+    {
+        yiaddr_str += std::to_string(yiaddr_ptr[i]); // Convert the byte to a string
+        if (i < 3)
+        {
+            yiaddr_str += "."; // Insert dot between octets
         }
     }
+    move(0,0);
+    printw("IP-Prefix Max-hosts Allocated addresses Utilization\n");
 
-    std::cout << yiaddr_str << std::endl;
-
-    if (std::find(seen_ips.begin(),seen_ips.end(), yiaddr_str) == seen_ips.end()) {
+    if (std::find(seen_ips.begin(), seen_ips.end(), yiaddr_str) == seen_ips.end())
+    {
         seen_ips.push_back(yiaddr_str);
-        for (auto& prefix : ip_prefixes) {
-            if (prefix.ip_belongs(yiaddr_str)) {
+        std::map<std::string, int> prefix_lines;
+        int current_line = 1;
+
+        for (auto &prefix : ip_prefixes)
+        {
+            if (prefix.ip_belongs(yiaddr_str))
+            {
                 prefix.increment_host_count();
-                std::cout << "IP " << yiaddr_str << " belongs to prefix " << prefix.get_ip_address() << "/" << prefix.get_prefix_length() << std::endl;
-                std::cout << "Usage for this prefix: " << prefix.usage() * 100 << "%" << std::endl;
+                std::string prefix_str = prefix.to_string();
+
+                if (prefix_lines.find(prefix_str) == prefix_lines.end())
+                {
+                    prefix_lines[prefix_str] = current_line++;
+                }
+
+                move(prefix_lines[prefix_str],0);
+                printw("%s %d %d %.2f%%\n", prefix.to_string().c_str(), prefix.get_max_hosts(), prefix.get_current_hosts(), prefix.usage() * 100);
+                refresh();
+
+                if (prefix.usage() > 0.5)
+                {
+                    openlog("dhcp-stats", LOG_PID | LOG_CONS, LOG_USER);
+                    syslog(LOG_ERR, "Prefix %s exceeded 50%% of allocations.", prefix.to_string().c_str());
+                    closelog();
+                }
+                
                 break; // Exit loop once we find the matching prefix
             }
         }
-    } 
-    
+    }
 }
 
 int main(int argc, char **argv)
@@ -139,9 +166,9 @@ int main(int argc, char **argv)
     bpf_u_int32 pMask;
     bpf_u_int32 pNet;
     struct bpf_program fp;
-    
+
     char errbuf[PCAP_ERRBUF_SIZE];
-    int arguments = 0;    
+    int arguments = 0;
 
     if (argc > 1)
     {
@@ -150,13 +177,13 @@ int main(int argc, char **argv)
     else
     {
         std::cerr << "Usage: " << argv[0] << " [-r <filename>] [-i <interface-name> ...] <ip-prefix> [<ip-prefix> ... ]" << std::endl;
-        exit(0);
+        exit(1);
     }
 
     if (arguments != 0)
     {
         std::cerr << "Usage: " << argv[0] << " [-r <filename>] [-i <interface-name> ...] <ip-prefix> [<ip-prefix> ... ]" << std::endl;
-        exit(0);
+        exit(1);
     }
 
     for (const auto &ip : ip_prefixes_vec)
@@ -164,15 +191,19 @@ int main(int argc, char **argv)
         ip_prefixes.emplace_back(ip);
     }
 
+    initscr();
+
     // Handling CTRL + C
     signal(SIGINT, signal_handler);
+    
 
-   
-    if (strcmp(argv[1], "-i") == 0) {
+    if (strcmp(argv[1], "-i") == 0)
+    {
         // this part is inspired by https://www.thegeekstuff.com/2012/10/packet-sniffing-using-libpcap/
         if (pcap_findalldevs(&alldevs, errbuf) == PCAP_ERROR)
         {
             fprintf(stderr, "Error finding interface: %s\n", errbuf);
+            endwin();
             exit(1);
         }
 
@@ -199,9 +230,10 @@ int main(int argc, char **argv)
                 std::cerr << device->name << std::endl;
             }
             pcap_freealldevs(alldevs);
-            return 1;
+            endwin();
+            exit(1);
         }
-        
+
         if (pcap_lookupnet(interface_select->name, &pNet, &pMask, errbuf) == PCAP_ERROR)
         {
             pMask = 0;
@@ -215,32 +247,38 @@ int main(int argc, char **argv)
         {
             pcap_close(descr);
             fprintf(stderr, "pcap_open_live() failed due to [%s]\n", errbuf);
+            endwin();
             exit(1);
         }
     }
-    else {
+    else
+    {
         pcap_file = argv[2];
 
-        if (!pcap_file.empty()){
-            descr = pcap_open_offline(pcap_file.c_str(),errbuf);
-        } else {
+        if (!pcap_file.empty())
+        {
+            descr = pcap_open_offline(pcap_file.c_str(), errbuf);
+        }
+        else
+        {
             std::cerr << "Empty pcap file" << errbuf << std::endl;
-            return -1;
+            endwin();
+            exit(1);
         }
 
-        if (descr == NULL) 
+        if (descr == NULL)
         {
             std::cerr << "Error opening device: " << errbuf << std::endl;
-            return -1;
+            endwin();
+            exit(1);
         }
-        
     }
-    
-    
+
     if (pcap_datalink(descr) != DLT_EN10MB)
     {
         pcap_close(descr);
         fprintf(stderr, "Device does not have ethernet headers\n");
+        endwin();
         exit(1);
     }
 
@@ -251,6 +289,7 @@ int main(int argc, char **argv)
         pcap_freecode(&fp);
         pcap_close(descr);
         fprintf(stderr, "pcap_compile() failed\n");
+        endwin();
         exit(1);
     }
 
@@ -259,19 +298,21 @@ int main(int argc, char **argv)
         pcap_freecode(&fp);
         pcap_close(descr);
         fprintf(stderr, "pcap_setfilter() failed\n");
+        endwin();
         exit(1);
     }
-    
+
     if (pcap_loop(descr, 0, callback, NULL) == -1)
     {
         pcap_freecode(&fp);
         pcap_close(descr);
         fprintf(stderr, "pcap_loop() failed\n");
+        endwin();
         exit(1);
     }
 
     pcap_freecode(&fp);
     pcap_close(descr);
-
+    closelog();
     return 0;
 }

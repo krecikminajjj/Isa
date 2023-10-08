@@ -6,7 +6,8 @@ prefix.o
 
 #pcap files
 
-dhcp.pcap
+*.pcap
+*.py
 
 #vscode files
 
