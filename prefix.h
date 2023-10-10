@@ -6,7 +6,7 @@ private:
     std::string ip_address; // Base IP of the prefix
     int prefix_length;      // Length of the prefix
     int max_hosts;
-    int current_hosts;
+    int current_hosts = 0;
 
     // Convert IP address string to a numeric representation
     uint32_t ip_to_int(const std::string &ip);

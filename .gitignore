@@ -4,9 +4,8 @@ dhcp-stats
 dhcp-stats.o
 prefix.o
 
-#pcap files
+#py files
 
-*.pcap
 *.py
 
 #vscode files

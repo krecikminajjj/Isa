@@ -24,7 +24,6 @@ void signal_handler(int signum)
     printf("Closing... \n");
     pcap_close(descr);
     endwin();
-    closelog();
     exit(0);
 }
 
@@ -102,6 +101,8 @@ void callback(u_char *args, const struct pcap_pkthdr *header, const u_char *pack
 {
     (void)args;
     (void)header;
+    std::map<std::string, int> prefix_lines;
+    int current_line = 1;
 
     // Skip the Ethernet, IP, and UDP headers to get to DHCP
     const uint8_t *dhcp_data = packet + 14 + 20 + 8;
@@ -118,42 +119,57 @@ void callback(u_char *args, const struct pcap_pkthdr *header, const u_char *pack
             yiaddr_str += "."; // Insert dot between octets
         }
     }
-    move(0,0);
-    printw("IP-Prefix Max-hosts Allocated addresses Utilization\n");
 
-    if (std::find(seen_ips.begin(), seen_ips.end(), yiaddr_str) == seen_ips.end())
-    {
-        seen_ips.push_back(yiaddr_str);
-        std::map<std::string, int> prefix_lines;
-        int current_line = 1;
+    // Sort by prefix length (not max hosts) - smaller lengths first
+    std::sort(ip_prefixes.begin(), ip_prefixes.end(), [](const Prefix &a, const Prefix &b){
+        return a.get_prefix_length() < b.get_prefix_length();
+    });
 
-        for (auto &prefix : ip_prefixes)
+    if (yiaddr_str != "0.0.0.0") {
+                          
+        if (std::find(seen_ips.begin(), seen_ips.end(), yiaddr_str) == seen_ips.end())
         {
-            if (prefix.ip_belongs(yiaddr_str))
+            seen_ips.push_back(yiaddr_str);
+
+            for (auto &prefix : ip_prefixes)
             {
-                prefix.increment_host_count();
-                std::string prefix_str = prefix.to_string();
+                if (prefix.get_current_hosts() != prefix.get_max_hosts()) {
+                    if (prefix.ip_belongs(yiaddr_str))
+                    {
+                        prefix.increment_host_count();
 
-                if (prefix_lines.find(prefix_str) == prefix_lines.end())
-                {
-                    prefix_lines[prefix_str] = current_line++;
+                        std::string prefix_str = prefix.to_string();
+                        if (prefix_lines.find(prefix_str) == prefix_lines.end())
+                        {
+                            prefix_lines[prefix_str] = current_line++;
+                        }
+
+                        if (prefix.usage() > 0.5)
+                        {
+                            openlog("dhcp-stats", LOG_PID | LOG_CONS, LOG_USER);
+                            syslog(LOG_ERR, "Prefix %s exceeded 50%% of allocations.", prefix.to_string().c_str());
+                            closelog();
+                        }
+                    }
                 }
-
-                move(prefix_lines[prefix_str],0);
-                printw("%s %d %d %.2f%%\n", prefix.to_string().c_str(), prefix.get_max_hosts(), prefix.get_current_hosts(), prefix.usage() * 100);
-                refresh();
-
-                if (prefix.usage() > 0.5)
-                {
-                    openlog("dhcp-stats", LOG_PID | LOG_CONS, LOG_USER);
-                    syslog(LOG_ERR, "Prefix %s exceeded 50%% of allocations.", prefix.to_string().c_str());
-                    closelog();
-                }
-                
-                break; // Exit loop once we find the matching prefix
             }
         }
     }
+    
+    move(0,0);
+    printw("IP-Prefix Max-hosts Allocated addresses Utilization\n");
+
+    for (const auto &prefix : ip_prefixes)
+    {
+        std::string prefix_str = prefix.to_string();
+        if (prefix_lines.find(prefix_str) == prefix_lines.end())
+        {
+            prefix_lines[prefix_str] = current_line++;
+        }
+        move(prefix_lines[prefix_str], 0);
+        printw("%s %d %d %.2f%%\n", prefix_str.c_str(), prefix.get_max_hosts(), prefix.get_current_hosts(), prefix.usage() * 100);
+    }
+    refresh();
 }
 
 int main(int argc, char **argv)
@@ -250,6 +266,15 @@ int main(int argc, char **argv)
             endwin();
             exit(1);
         }
+
+        if (pcap_datalink(descr) != DLT_EN10MB)
+        {
+            pcap_close(descr);
+            fprintf(stderr, "Device does not have ethernet headers\n");
+            endwin();
+            exit(1);
+        }
+
     }
     else
     {
@@ -274,14 +299,7 @@ int main(int argc, char **argv)
         }
     }
 
-    if (pcap_datalink(descr) != DLT_EN10MB)
-    {
-        pcap_close(descr);
-        fprintf(stderr, "Device does not have ethernet headers\n");
-        endwin();
-        exit(1);
-    }
-
+    
     std::string filter_str = "udp and port 67 or port 68";
 
     if (pcap_compile(descr, &fp, filter_str.c_str(), 0, pNet) == -1)
@@ -312,7 +330,8 @@ int main(int argc, char **argv)
     }
 
     pcap_freecode(&fp);
+    getch();
     pcap_close(descr);
-    closelog();
+    endwin();
     return 0;
 }
