@@ -146,9 +146,9 @@ void callback(u_char *args, const struct pcap_pkthdr *header, const u_char *pack
 
                     if (prefix.usage() > 0.5)
                     {
-                        //openlog("dhcp-stats", LOG_PID | LOG_CONS, LOG_USER);
-                        //syslog(LOG_ERR, "Prefix %s exceeded 50%% of allocations.", prefix.to_string().c_str());
-                        //closelog();
+                        openlog("dhcp-stats", LOG_PID | LOG_CONS, LOG_USER);
+                        syslog(LOG_ERR, "Prefix %s exceeded 50%% of allocations.", prefix.to_string().c_str());
+                        closelog();
                     }
                 
                 }
