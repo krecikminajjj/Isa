@@ -90,7 +90,7 @@ int check_args(int argc, char **argv, std::string &pcap_file, std::string &inter
             std::cout << "-h              : Show this help message." << std::endl;
             exit(0); // Exit the program after showing help
         default:
-            std::cerr << "Error: IP addresses must follow the interface argument." << std::endl;
+            std::cerr << "Error: Arguments not used correctly type './dhcp-stats -h for help." << std::endl;
             return 1;
         }
     }
@@ -133,24 +133,24 @@ void callback(u_char *args, const struct pcap_pkthdr *header, const u_char *pack
 
             for (auto &prefix : ip_prefixes)
             {
-                if (prefix.get_current_hosts() != prefix.get_max_hosts()) {
-                    if (prefix.ip_belongs(yiaddr_str))
+                
+                if (prefix.ip_belongs(yiaddr_str))
+                {
+                    prefix.increment_host_count();
+
+                    std::string prefix_str = prefix.to_string();
+                    if (prefix_lines.find(prefix_str) == prefix_lines.end())
                     {
-                        prefix.increment_host_count();
-
-                        std::string prefix_str = prefix.to_string();
-                        if (prefix_lines.find(prefix_str) == prefix_lines.end())
-                        {
-                            prefix_lines[prefix_str] = current_line++;
-                        }
-
-                        if (prefix.usage() > 0.5)
-                        {
-                            openlog("dhcp-stats", LOG_PID | LOG_CONS, LOG_USER);
-                            syslog(LOG_ERR, "Prefix %s exceeded 50%% of allocations.", prefix.to_string().c_str());
-                            closelog();
-                        }
+                        prefix_lines[prefix_str] = current_line++;
                     }
+
+                    if (prefix.usage() > 0.5)
+                    {
+                        //openlog("dhcp-stats", LOG_PID | LOG_CONS, LOG_USER);
+                        //syslog(LOG_ERR, "Prefix %s exceeded 50%% of allocations.", prefix.to_string().c_str());
+                        //closelog();
+                    }
+                
                 }
             }
         }

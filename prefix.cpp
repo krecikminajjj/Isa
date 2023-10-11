@@ -22,6 +22,10 @@ bool Prefix::ip_belongs(const std::string &ip)
     uint32_t ip_num = ip_to_int(ip);
     uint32_t prefix_num = ip_to_int(ip_address);
     uint32_t mask = ~((1 << (32 - prefix_length)) - 1); // Calculate netmask
+    uint32_t network_address = prefix_num & mask;
+    uint32_t broadcast_address = network_address | ~mask;
+
+    if(ip_num == network_address || ip_num == broadcast_address) { return false; } // The IP is either the network or broadcast address
 
     return (ip_num & mask) == (prefix_num & mask); // Check if IPs match in the prefix
 }
