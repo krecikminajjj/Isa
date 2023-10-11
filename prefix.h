@@ -21,7 +21,7 @@ public:
     bool ip_belongs(const std::string &ip);
 
     // Usage percentage
-    float usage() const { return static_cast<float>(current_hosts) / max_hosts; }
+    float usage() const;
 
     // Getters and setters as needed
     int get_max_hosts() const { return max_hosts; }

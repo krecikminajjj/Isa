@@ -7,7 +7,18 @@ Prefix::Prefix(const std::string &prefix_str)
     prefix_length = std::stoi(prefix_str.substr(slash_pos + 1));
 
     max_hosts = (1 << (32 - prefix_length)) - 2; // Subtracting network and broadcast addresses
-    current_hosts = 0;
+
+    if (max_hosts < 0)
+    {
+        max_hosts = 0;
+    }    
+}
+
+float Prefix::usage() const {
+    if (max_hosts > 0) {
+        return static_cast<float>(current_hosts) / max_hosts;
+    }
+    return 0.0f;
 }
 
 uint32_t Prefix::ip_to_int(const std::string &ip)
