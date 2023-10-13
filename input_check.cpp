@@ -5,7 +5,7 @@ int check_args(int argc, char **argv, std::string &pcap_file, std::string &inter
 {
     int opt;
     bool i_flag = false;
-    bool r_flag = false;    
+    bool r_flag = false;
 
     if (argc < 1)
     {
@@ -18,9 +18,9 @@ int check_args(int argc, char **argv, std::string &pcap_file, std::string &inter
         switch (opt)
         {
         case 'r':
-            r_flag = true; 
+            r_flag = true;
             if (optarg)
-            { 
+            {
                 pcap_file = std::string(optarg);
                 while (optind < argc && argv[optind][0] != '-')
                 {
@@ -80,20 +80,20 @@ int check_args(int argc, char **argv, std::string &pcap_file, std::string &inter
     }
 
     // Check if neither -r nor -i were provided
-    if (!r_flag && !i_flag)  
+    if (!r_flag && !i_flag)
     {
         std::cerr << "Error: Either -r or -i must be provided. Type './dhcp-stats -h' for help." << std::endl;
         return 1;
     }
     else if (r_flag && i_flag)
     {
-      std::cerr << "Error: Either -r or -i must be provided not both. Type './dhcp-stats -h' for help." << std::endl;  
+        std::cerr << "Error: Either -r or -i must be provided not both. Type './dhcp-stats -h' for help." << std::endl;
     }
 
     return 0;
 }
 
-bool valid_prefix(const std::string &ip)
+bool valid_prefix(std::string ip)
 {
     std::regex ip_prefix{
         "^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\."

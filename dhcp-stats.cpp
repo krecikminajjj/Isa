@@ -61,7 +61,7 @@ void callback(u_char *args, const struct pcap_pkthdr *header, const u_char *pack
         {
             seen_ips.push_back(yiaddr_str);
 
-            for (auto &prefix : ip_prefixes)
+            for (Prefix &prefix : ip_prefixes)
             {
 
                 if (prefix.ip_belongs(yiaddr_str))
@@ -74,9 +74,9 @@ void callback(u_char *args, const struct pcap_pkthdr *header, const u_char *pack
                         prefix_lines[prefix_str] = current_line++;
                     }
 
-                    if (prefix.usage() > 0.5 && prefix.get_usage_flag() == 0)
+                    if (prefix.usage() > 0.5 && prefix.get_usage_flag() == false)
                     {
-                        prefix.set_usage_flag(1);
+                        prefix.set_usage_flag(true);
                         openlog("dhcp-stats", LOG_PID | LOG_CONS, LOG_USER);
                         syslog(LOG_ERR, "Prefix %s exceeded 50%% of allocations.", prefix.to_string().c_str());
                         closelog();
@@ -89,7 +89,7 @@ void callback(u_char *args, const struct pcap_pkthdr *header, const u_char *pack
     move(0, 0);
     printw("IP-Prefix Max-hosts Allocated addresses Utilization\n");
 
-    for (const auto &prefix : ip_prefixes)
+    for (Prefix &prefix : ip_prefixes)
     {
         std::string prefix_str = prefix.to_string();
         if (prefix_lines.find(prefix_str) == prefix_lines.end())
@@ -115,7 +115,6 @@ int main(int argc, char **argv)
 
     char errbuf[PCAP_ERRBUF_SIZE];
     int arguments = 0;
-    bool prefix_regex = false;
 
     arguments = check_args(argc, argv, pcap_file, interface, ip_prefixes_vec);
 
@@ -125,16 +124,16 @@ int main(int argc, char **argv)
         exit(1);
     }
 
-    for (auto ip : ip_prefixes_vec)
+    for (std::string ip_prefix : ip_prefixes_vec)
     {
-        ip_prefixes.emplace_back(ip);
+        std::string ip = ip_prefix.substr(0, ip_prefix.find('/'));
+        int prefix_length = std::stoi(ip_prefix.substr(ip_prefix.find('/') + 1));
+        ip_prefixes.emplace_back(ip, prefix_length);
     }
 
-    for (const auto &prefix : ip_prefixes_vec)
+    for (std::string prefix : ip_prefixes_vec)
     {
-        prefix_regex = valid_prefix(prefix);
-
-        if (prefix_regex == false)
+        if (!valid_prefix(prefix))
         {
             std::cerr << "Invalid prefix" << prefix << std::endl;
             exit(1);

@@ -1,8 +1,7 @@
 # binaries
 
 dhcp-stats
-dhcp-stats.o
-prefix.o
+*.o
 
 #py files
 
