@@ -13,7 +13,7 @@ private:
     uint32_t ip_to_int(const std::string &ip);
 
 public:
-    Prefix(const std::string &prefix_str); // Constructor will need to parse the prefix string
+    Prefix(const std::string prefix_str); // Constructor will need to parse the prefix string
 
     ~Prefix();
 

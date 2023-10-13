@@ -125,7 +125,7 @@ int main(int argc, char **argv)
         exit(1);
     }
 
-    for (const auto &ip : ip_prefixes_vec)
+    for (auto ip : ip_prefixes_vec)
     {
         ip_prefixes.emplace_back(ip);
     }

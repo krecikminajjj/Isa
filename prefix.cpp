@@ -1,6 +1,6 @@
 #include "prefix.h"
 
-Prefix::Prefix(const std::string &prefix_str)
+Prefix::Prefix(const std::string prefix_str)
 {
     size_t slash_pos = prefix_str.find('/');
     this->ip_address = prefix_str.substr(0, slash_pos);
@@ -11,14 +11,14 @@ Prefix::Prefix(const std::string &prefix_str)
     if (this->max_hosts < 0)
     {
         this->max_hosts = 0;
-    }    
+    }
 }
 
 Prefix::~Prefix() = default;
 
-float Prefix::usage() const 
+float Prefix::usage() const
 {
-    if (this->max_hosts > 0) 
+    if (this->max_hosts > 0)
     {
         return static_cast<float>(this->current_hosts) / this->max_hosts;
     }
@@ -40,8 +40,8 @@ bool Prefix::ip_belongs(const std::string &ip)
     uint32_t network_address = prefix_num & mask;
     uint32_t broadcast_address = network_address | ~mask;
 
-    if(ip_num == network_address || ip_num == broadcast_address) 
-    { 
+    if (ip_num == network_address || ip_num == broadcast_address)
+    {
         return false; // The IP is either the network or broadcast address
     }
 
