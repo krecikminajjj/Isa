@@ -33,12 +33,34 @@ void callback(u_char *args, const struct pcap_pkthdr *header, const u_char *pack
     (void)header;
     std::map<std::string, int> prefix_lines;
     int current_line = 1;
-
+    
     // Skip the Ethernet, IP, and UDP headers to get to DHCP
     const uint8_t *dhcp_data = packet + 14 + 20 + 8;
 
     // Now extract yiaddr
     const uint8_t *yiaddr_ptr = dhcp_data + 16;
+
+    const uint8_t *dhcp_options = dhcp_data +240;
+    bool is_ack = false;
+
+    while (*dhcp_options != 255)
+    {
+        uint8_t option_code = *dhcp_options++;
+        uint8_t option_length = *dhcp_options++;
+
+        if (option_code == 53 && *dhcp_options == 5) // Check for DHCP ACK
+        {
+            is_ack = true;
+            break;
+        }
+        dhcp_options += option_length; // Skip over this option's data
+    }
+
+    // If it's not a DHCP ACK, skip the rest of this iteration and await next callback
+    if (!is_ack)
+    {
+        return;
+    }
 
     std::string yiaddr_str;
     for (int i = 0; i < 4; ++i)
@@ -265,5 +287,3 @@ int main(int argc, char **argv)
     endwin();
     return 0;
 }
-
-//KOKOTKO KONTROLUJ CI JE TO ACK DO PCIE
