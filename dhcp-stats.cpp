@@ -37,9 +37,6 @@ void callback(u_char *args, const struct pcap_pkthdr *header, const u_char *pack
     // Skip the Ethernet, IP, and UDP headers to get to DHCP
     const uint8_t *dhcp_data = packet + 14 + 20 + 8;
 
-    / Skip the Ethernet, IP, and UDP headers to get to DHCP
-    const uint8_t *dhcp_data = packet + 14 + 20 + 8;
-
     const uint8_t *dhcp_options = dhcp_data + 240;
     bool is_ack = false;
 
