@@ -1,3 +1,8 @@
+/**
+ * @file prefix.cpp
+ * @author Patrik Potancok xpotan00
+ * @date 2023-10-19
+ */
 #include "prefix.h"
 
 Prefix::Prefix(const std::string ip_address, const int prefix_length)

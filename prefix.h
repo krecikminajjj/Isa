@@ -1,3 +1,8 @@
+/**
+ * @file prefix.h
+ * @author Patrik Potancok xpotan00
+ * @date 2023-10-19
+ */
 #pragma once
 #include <string>
 
@@ -6,9 +11,9 @@ class Prefix
 private:
     std::string ip_address; // Base IP of the prefix
     int prefix_length;      // Length of the prefix
-    int max_hosts;
-    int current_hosts;
-    bool usage_flag;
+    int max_hosts;          // Max hosts of the prefix
+    int current_hosts;      // Number of current hosts
+    bool usage_flag;        // % of usage
 
 public:
     Prefix(const std::string ip_address, const int prefix_length); // Constructor will need to parse the prefix string

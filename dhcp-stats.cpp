@@ -1,3 +1,9 @@
+/**
+ * @file dhcp-stats.cpp
+ * @author Patrik Potancok xpotan00
+ * @date 2023-10-19
+ */
+
 #include <pcap.h>
 #include <syslog.h>
 #include <vector>
@@ -27,6 +33,13 @@ void signal_handler(int signum)
     exit(0);
 }
 
+/**
+ * @brief Function for packet sniffing and printing stats
+ * 
+ * @param args 
+ * @param header 
+ * @param packet 
+ */
 void callback(u_char *args, const struct pcap_pkthdr *header, const u_char *packet)
 {
     (void)args;
@@ -37,9 +50,11 @@ void callback(u_char *args, const struct pcap_pkthdr *header, const u_char *pack
     // Skip the Ethernet, IP, and UDP headers to get to DHCP
     const uint8_t *dhcp_data = packet + 14 + 20 + 8;
 
+    // Get to DHCP options
     const uint8_t *dhcp_options = dhcp_data + 240;
     bool is_ack = false;
 
+    // Look for DHCP ack in options
     while (*dhcp_options != 255)
     {
         uint8_t option_code = *dhcp_options++;
@@ -59,9 +74,10 @@ void callback(u_char *args, const struct pcap_pkthdr *header, const u_char *pack
         return;
     }
 
-    // Now extract yiaddr
+    // Extract yiaddr
     const uint8_t *yiaddr_ptr = dhcp_data + 16;
 
+    // Converting yiaddr to string
     std::string yiaddr_str;
     for (int i = 0; i < 4; ++i)
     {
@@ -76,31 +92,27 @@ void callback(u_char *args, const struct pcap_pkthdr *header, const u_char *pack
     std::sort(ip_prefixes.begin(), ip_prefixes.end(), [](const Prefix &a, const Prefix &b)
               { return a.get_prefix_length() < b.get_prefix_length(); });
 
+    // Skip 0.0.0.0 address
     if (yiaddr_str != "0.0.0.0")
     {
-
+        // If IP was not seen yet it will be added to seen_ips
         if (std::find(seen_ips.begin(), seen_ips.end(), yiaddr_str) == seen_ips.end())
         {
             seen_ips.push_back(yiaddr_str);
-
+            // Check if the IP belongs in any prefix
             for (Prefix &prefix : ip_prefixes)
             {
-
+                // If it belongs the host count will be incemented 
                 if (prefix.ip_belongs(yiaddr_str))
                 {
                     prefix.increment_host_count();
 
-                    std::string prefix_str = prefix.to_string();
-                    if (prefix_lines.find(prefix_str) == prefix_lines.end())
-                    {
-                        prefix_lines[prefix_str] = current_line++;
-                    }
-
+                    // If usage is more than 50% error will be printed to syslog
                     if (prefix.usage() > 0.5 && prefix.get_usage_flag() == false)
                     {
                         prefix.set_usage_flag(true);
                         openlog("dhcp-stats", LOG_PID | LOG_CONS, LOG_USER);
-                        syslog(LOG_ERR, "Prefix %s exceeded 50%% of allocations.", prefix.to_string().c_str());
+                        syslog(LOG_ERR, "prefix %s exceeded 50%% of allocations.", prefix.to_string().c_str());
                         closelog();
                     }
                 }
@@ -108,11 +120,13 @@ void callback(u_char *args, const struct pcap_pkthdr *header, const u_char *pack
         }
     }
 
+    //Printing stats
     move(0, 0);
     printw("IP-Prefix Max-hosts Allocated addresses Utilization\n");
 
     for (Prefix &prefix : ip_prefixes)
     {
+        // Finding line in which the desired prefix is and changing just that one line
         std::string prefix_str = prefix.to_string();
         if (prefix_lines.find(prefix_str) == prefix_lines.end())
         {
@@ -145,7 +159,8 @@ int main(int argc, char **argv)
         std::cerr << "Usage: " << argv[0] << " [-r <filename>] [-i <interface-name> ...] <ip-prefix> [<ip-prefix> ... ]" << std::endl;
         exit(1);
     }
-
+    
+    // Creating instances of class prefix
     for (std::string ip_prefix : ip_prefixes_vec)
     {
         std::string ip = ip_prefix.substr(0, ip_prefix.find('/'));
@@ -153,11 +168,12 @@ int main(int argc, char **argv)
         ip_prefixes.emplace_back(ip, prefix_length);
     }
 
+    // Checking if the prefix has correct syntax
     for (std::string prefix : ip_prefixes_vec)
     {
         if (!valid_prefix(prefix))
         {
-            std::cerr << "Invalid prefix" << prefix << std::endl;
+            std::cerr << "Invalid prefix " << prefix << std::endl;
             exit(1);
         }
     }
@@ -167,6 +183,7 @@ int main(int argc, char **argv)
     // Handling CTRL + C
     signal(SIGINT, signal_handler);
 
+    // If we are sniffing an interface
     if (strcmp(argv[1], "-i") == 0)
     {
         if (pcap_findalldevs(&alldevs, errbuf) == PCAP_ERROR)
@@ -176,7 +193,7 @@ int main(int argc, char **argv)
             exit(1);
         }
 
-        // check if user selected a valid interface
+        // Check if user selected a valid interface
         bool is_interface_valid = false;
         for (device = alldevs; device; device = device->next)
         {
@@ -188,7 +205,7 @@ int main(int argc, char **argv)
             }
         }
 
-        // if no selected interface was valid print a list of all avaible interfaces
+        // If no selected interface was valid print a list of all avaible interfaces
         if (!is_interface_valid)
         {
             std::cerr << "Invalid interface: " << interface << std::endl;

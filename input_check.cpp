@@ -1,3 +1,8 @@
+/**
+ * @file input_check.cpp
+ * @author Patrik Potancok xpotan00
+ * @date 2023-10-19
+ */
 #include "input_check.h"
 #include <iostream>
 
