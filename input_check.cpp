@@ -63,7 +63,7 @@ int check_args(int argc, char **argv, std::string &pcap_file, std::string &inter
                 }
                 if (ip_prefixes.empty())
                 {
-                    std::cerr << "Error: IP addresses must follow the interface argument." << std::endl;
+                    std::cerr << "Error: IP prefixes must follow the interface argument." << std::endl;
                     return 1;
                 }
             }
