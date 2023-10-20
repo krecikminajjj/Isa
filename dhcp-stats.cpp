@@ -187,7 +187,6 @@ int main(int argc, char **argv)
         if (pcap_findalldevs(&alldevs, errbuf) == PCAP_ERROR)
         {
             std::cerr << "Error finding interface: " << errbuf << std::endl;
-            endwin();
             exit(1);
         }
 
@@ -214,9 +213,11 @@ int main(int argc, char **argv)
                 std::cerr << device->name << std::endl;
             }
             pcap_freealldevs(alldevs);
-            endwin();
             exit(1);
         }
+
+        //initializing ncurses field
+        initscr();
 
         if (pcap_lookupnet(interface_select->name, &pNet, &pMask, errbuf) == PCAP_ERROR)
         {
@@ -247,6 +248,9 @@ int main(int argc, char **argv)
     {
         pcap_file = argv[2];
 
+        //initializing ncurses field
+        initscr();
+        
         if (!pcap_file.empty())
         {
             descr = pcap_open_offline(pcap_file.c_str(), errbuf);
@@ -285,9 +289,6 @@ int main(int argc, char **argv)
         endwin();
         exit(1);
     }
-
-    //initializing ncurses field
-    initscr();
     
     if (pcap_loop(descr, 0, callback, NULL) == -1)
     {
