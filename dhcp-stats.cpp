@@ -178,8 +178,6 @@ int main(int argc, char **argv)
         }
     }
 
-    initscr();
-
     // Handling CTRL + C
     signal(SIGINT, signal_handler);
 
@@ -288,6 +286,9 @@ int main(int argc, char **argv)
         exit(1);
     }
 
+    //initializing ncurses field
+    initscr();
+    
     if (pcap_loop(descr, 0, callback, NULL) == -1)
     {
         pcap_freecode(&fp);
