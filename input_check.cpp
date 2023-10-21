@@ -18,7 +18,15 @@ int check_args(int argc, char **argv, std::string &pcap_file, std::string &inter
         exit(1);
     }
 
-    while ((opt = getopt(argc, argv, "r:i:h")) != -1)
+    // Long options of arguments
+    const struct option long_options[] = {
+        {"interface", required_argument, nullptr, 'i'},
+        {"read", required_argument, nullptr, 'r'},
+        {"help", no_argument, nullptr, 'h'},
+        {nullptr, 0, nullptr, 0}
+    };
+
+    while ((opt = getopt_long(argc, argv, "r:i:h", long_options, nullptr)) != -1)
     {
         switch (opt)
         {
@@ -74,9 +82,9 @@ int check_args(int argc, char **argv, std::string &pcap_file, std::string &inter
             break;
         case 'h':
             std::cout << "Usage: " << argv[0] << " [-r <filename>] [-i <interface-name> ...] <ip-prefix> [<ip-prefix> ... ]" << std::endl;
-            std::cout << "-r <filename>   : Parse pcap file for DHCP packets." << std::endl;
-            std::cout << "-i <interface>  : Listen on the given interface for DHCP packets." << std::endl;
-            std::cout << "-h              : Show this help message." << std::endl;
+            std::cout << "-r/--read <filename>   : Parse pcap file for DHCP packets." << std::endl;
+            std::cout << "-i/--interface <interface>  : Listen on the given interface for DHCP packets." << std::endl;
+            std::cout << "-h/--help             : Show this help message." << std::endl;
             exit(0); // Exit the program after showing help
         default:
             std::cerr << "Error: Arguments not used correctly type './dhcp-stats -h for help." << std::endl;

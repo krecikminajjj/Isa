@@ -182,7 +182,7 @@ int main(int argc, char **argv)
     signal(SIGINT, signal_handler);
 
     // If we are sniffing an interface
-    if (strcmp(argv[1], "-i") == 0)
+    if (strcmp(argv[1], "-i") == 0 || strcmp(argv[1], "--interface") == 0)
     {
         if (pcap_findalldevs(&alldevs, errbuf) == PCAP_ERROR)
         {
@@ -250,7 +250,7 @@ int main(int argc, char **argv)
             exit(1);
         }
     }
-    else
+    else if (strcmp(argv[1], "-r") == 0 || strcmp(argv[1], "--read") == 0)
     {
         //initializing ncurses field
         initscr();
@@ -275,6 +275,10 @@ int main(int argc, char **argv)
             endwin();
             exit(1);
         }
+    }
+    else 
+    {
+        std::cerr << "Invalid argument" << std::endl;
     }
 
     // Set filter to capture only UDP packets on ports 67 or 68.
