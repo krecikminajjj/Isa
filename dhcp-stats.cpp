@@ -230,7 +230,6 @@ int main(int argc, char **argv)
 
         if (descr == NULL)
         {
-            pcap_close(descr);
             std::cerr << "pcap_open_live() failed due to " << errbuf << std::endl;
             endwin();
             exit(1);
