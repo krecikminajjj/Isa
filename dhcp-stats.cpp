@@ -216,18 +216,24 @@ int main(int argc, char **argv)
             exit(1);
         }
 
-        //initializing ncurses field
+        // Initializing ncurses field
         initscr();
 
+        // Attempt to retrieve the network address and mask of the selected interface.
         if (pcap_lookupnet(interface_select->name, &pNet, &pMask, errbuf) == PCAP_ERROR)
         {
+            // If lookup fails, default the network address and mask to 0.
             pMask = 0;
             pNet = 0;
         }
+
+        // Open the selected interface for live capturing. Set buffer size and read timeout.
         descr = pcap_open_live(interface_select->name, BUFSIZ, 1, 1000, errbuf);
 
+        // Free the list of available devices.
         pcap_freealldevs(alldevs);
 
+        // Check if the descriptor was initialized correctly.
         if (descr == NULL)
         {
             std::cerr << "pcap_open_live() failed due to " << errbuf << std::endl;
@@ -235,6 +241,7 @@ int main(int argc, char **argv)
             exit(1);
         }
 
+        // Check if the opened device supports Ethernet headers.
         if (pcap_datalink(descr) != DLT_EN10MB)
         {
             pcap_close(descr);
@@ -245,13 +252,13 @@ int main(int argc, char **argv)
     }
     else
     {
-        pcap_file = argv[2];
-
         //initializing ncurses field
         initscr();
         
+        // Check if the pcap file is not empty.
         if (!pcap_file.empty())
         {
+            // Open pcap file for offline analysis.
             descr = pcap_open_offline(pcap_file.c_str(), errbuf);
         }
         else
@@ -261,6 +268,7 @@ int main(int argc, char **argv)
             exit(1);
         }
 
+        // Check if the descriptor was initialized correctly.
         if (descr == NULL)
         {
             std::cerr << "Error opening device: " << errbuf << std::endl;
@@ -269,8 +277,10 @@ int main(int argc, char **argv)
         }
     }
 
+    // Set filter to capture only UDP packets on ports 67 or 68.
     std::string filter_str = "udp and port 67 or port 68";
 
+    // Compile the filter.
     if (pcap_compile(descr, &fp, filter_str.c_str(), 0, pNet) == -1)
     {
         pcap_freecode(&fp);
@@ -280,6 +290,7 @@ int main(int argc, char **argv)
         exit(1);
     }
 
+    // Set the compiled filter for the capture.
     if (pcap_setfilter(descr, &fp) == -1)
     {
         pcap_freecode(&fp);
@@ -289,6 +300,7 @@ int main(int argc, char **argv)
         exit(1);
     }
     
+    // Start capturing packets. Callback function will be invoked for each captured packet.
     if (pcap_loop(descr, 0, callback, NULL) == -1)
     {
         pcap_freecode(&fp);
@@ -298,9 +310,14 @@ int main(int argc, char **argv)
         exit(1);
     }
 
+    // Free the compiled filter.
     pcap_freecode(&fp);
+
+    // Notify user to press any key to terminate the program.
     printw("Press any key to exit...");
     getch();
+
+    // Clean up: Close the descriptor and the ncurses window.
     pcap_close(descr);
     endwin();
     return 0;
