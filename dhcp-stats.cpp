@@ -35,10 +35,10 @@ void signal_handler(int signum)
 
 /**
  * @brief Function for packet sniffing and printing stats
- * 
- * @param args 
- * @param header 
- * @param packet 
+ *
+ * @param args
+ * @param header
+ * @param packet
  */
 void callback(u_char *args, const struct pcap_pkthdr *header, const u_char *packet)
 {
@@ -46,7 +46,7 @@ void callback(u_char *args, const struct pcap_pkthdr *header, const u_char *pack
     (void)header;
     std::map<std::string, int> prefix_lines;
     int current_line = 1;
-    
+
     // Skip the Ethernet, IP, and UDP headers to get to DHCP
     const uint8_t *dhcp_data = packet + 14 + 20 + 8;
 
@@ -102,7 +102,7 @@ void callback(u_char *args, const struct pcap_pkthdr *header, const u_char *pack
             // Check if the IP belongs in any prefix
             for (Prefix &prefix : ip_prefixes)
             {
-                // If it belongs the host count will be incemented 
+                // If it belongs the host count will be incemented
                 if (prefix.ip_belongs(yiaddr_str))
                 {
                     prefix.increment_host_count();
@@ -120,7 +120,7 @@ void callback(u_char *args, const struct pcap_pkthdr *header, const u_char *pack
         }
     }
 
-    //Printing stats
+    // Printing stats
     move(0, 0);
     printw("IP-Prefix Max-hosts Allocated addresses Utilization\n");
 
@@ -159,7 +159,7 @@ int main(int argc, char **argv)
         std::cerr << "Usage: " << argv[0] << " [-r <filename>] [-i <interface-name> ...] <ip-prefix> [<ip-prefix> ... ]" << std::endl;
         exit(1);
     }
-    
+
     // Creating instances of class prefix
     for (std::string ip_prefix : ip_prefixes_vec)
     {
@@ -252,9 +252,9 @@ int main(int argc, char **argv)
     }
     else if (strcmp(argv[1], "-r") == 0 || strcmp(argv[1], "--read") == 0)
     {
-        //initializing ncurses field
+        // initializing ncurses field
         initscr();
-        
+
         // Check if the pcap file is not empty.
         if (!pcap_file.empty())
         {
@@ -276,7 +276,7 @@ int main(int argc, char **argv)
             exit(1);
         }
     }
-    else 
+    else
     {
         std::cerr << "Invalid argument" << std::endl;
     }
@@ -303,7 +303,7 @@ int main(int argc, char **argv)
         endwin();
         exit(1);
     }
-    
+
     // Start capturing packets. Callback function will be invoked for each captured packet.
     if (pcap_loop(descr, 0, callback, NULL) == -1)
     {

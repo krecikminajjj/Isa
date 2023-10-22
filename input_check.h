@@ -12,7 +12,7 @@
 
 /**
  * @brief function for checking if the input argumets are correct
- * 
+ *
  * @param argc number of arguments
  * @param argv arguments from terminal
  * @param pcap_file name of the pcap file will be returned here, if any was on input
@@ -23,9 +23,9 @@
 int check_args(int argc, char **argv, std::string &pcap_file, std::string &interface, std::vector<std::string> &ip_prefixes);
 /**
  * @brief checks if the prefix has the right regex
- * 
+ *
  * @param ip_prefix IP prefix
- * @return true 
- * @return false 
+ * @return true
+ * @return false
  */
 bool valid_prefix(std::string ip_prefix);

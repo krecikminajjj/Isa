@@ -23,8 +23,7 @@ int check_args(int argc, char **argv, std::string &pcap_file, std::string &inter
         {"interface", required_argument, nullptr, 'i'},
         {"read", required_argument, nullptr, 'r'},
         {"help", no_argument, nullptr, 'h'},
-        {nullptr, 0, nullptr, 0}
-    };
+        {nullptr, 0, nullptr, 0}};
 
     while ((opt = getopt_long(argc, argv, "r:i:h", long_options, nullptr)) != -1)
     {
