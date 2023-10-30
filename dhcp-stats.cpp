@@ -15,6 +15,7 @@
 #include <string.h>
 #include <syslog.h>
 #include <map>
+#include <arpa/inet.h>
 
 #include "prefix.h"
 #include "input_check.h"
@@ -47,8 +48,25 @@ void callback(u_char *args, const struct pcap_pkthdr *header, const u_char *pack
     std::map<std::string, int> prefix_lines;
     int current_line = 1;
 
-    // Skip the Ethernet, IP, and UDP headers to get to DHCP
-    const uint8_t *dhcp_data = packet + 14 + 20 + 8;
+    const uint8_t *dhcp_data;
+
+    if (pcap_datalink(descr) == DLT_EN10MB)
+    { // If Ethernet
+        // Check for VLAN tag (0x8100 in network byte order)
+        if (*(uint16_t *)(packet + 12) == ntohs(0x8100))
+        {
+            dhcp_data = packet + 14 + 4 + 20 + 8; // Adjust for the 4 byte VLAN header
+        }
+        else if (*(uint16_t *)(packet + 12) == ntohs(0x0800))
+        { // 0x0800 is the EtherType for IPv4
+            dhcp_data = packet + 14 + 20 + 8;
+        }
+        else
+        {
+            // Unrecognized EtherType
+            return;
+        }
+    }
 
     // Get to DHCP options
     const uint8_t *dhcp_options = dhcp_data + 240;
@@ -216,7 +234,7 @@ int main(int argc, char **argv)
             exit(1);
         }
 
-        // Initializing ncurses field
+        //  Initializing ncurses field
         initscr();
 
         // Attempt to retrieve the network address and mask of the selected interface.
@@ -240,18 +258,11 @@ int main(int argc, char **argv)
             endwin();
             exit(1);
         }
-
-        // Check if the opened device supports Ethernet headers.
-        if (pcap_datalink(descr) != DLT_EN10MB)
-        {
-            pcap_close(descr);
-            std::cerr << "Device does not have ethernet headers" << std::endl;
-            endwin();
-            exit(1);
-        }
     }
     else if (strcmp(argv[1], "-r") == 0 || strcmp(argv[1], "--read") == 0)
     {
+        pcap_file = argv[2];
+
         // initializing ncurses field
         initscr();
 
@@ -281,8 +292,7 @@ int main(int argc, char **argv)
         std::cerr << "Invalid argument" << std::endl;
     }
 
-    // Set filter to capture only UDP packets on ports 67 or 68.
-    std::string filter_str = "udp and port 67 or port 68";
+    std::string filter_str = "(udp and (port 67 or port 68)) or ((vlan and udp) and (port 67 or port 68))";
 
     // Compile the filter.
     if (pcap_compile(descr, &fp, filter_str.c_str(), 0, pNet) == -1)
