@@ -138,20 +138,35 @@ void callback(u_char *args, const struct pcap_pkthdr *header, const u_char *pack
         }
     }
 
-    // Printing stats
+    // Define the column widths
+    int ip_prefix_width = 20;
+    int max_hosts_width = 10;
+    int allocated_width = 20;
+    int utilization_width = 12;
+
+    // Header
     move(0, 0);
-    printw("IP-Prefix Max-hosts Allocated addresses Utilization\n");
+    printw("%-*s %*s %*s %*s\n", ip_prefix_width, "IP-Prefix", max_hosts_width, "Max-hosts", allocated_width, "Allocated addresses", utilization_width, "Utilization");
 
     for (Prefix &prefix : ip_prefixes)
     {
-        // Finding line in which the desired prefix is and changing just that one line
         std::string prefix_str = prefix.to_string();
+
+        // Finding the line for the prefix
         if (prefix_lines.find(prefix_str) == prefix_lines.end())
         {
             prefix_lines[prefix_str] = current_line++;
         }
+
         move(prefix_lines[prefix_str], 0);
-        printw("%s %d %d %.2f%%\n", prefix_str.c_str(), prefix.get_max_hosts(), prefix.get_current_hosts(), prefix.usage() * 100);
+        if (prefix.usage() < 0.5)
+        {
+            printw("%-*s %*d %*d %*.2f%%\n", ip_prefix_width, prefix_str.c_str(), max_hosts_width, prefix.get_max_hosts(), allocated_width, prefix.get_current_hosts(), utilization_width, prefix.usage() * 100);
+        }
+        else
+        {
+            printw("%-*s %*d %*d %*.2f%% exceeded 50%% of allocations!\n", ip_prefix_width, prefix_str.c_str(), max_hosts_width, prefix.get_max_hosts(), allocated_width, prefix.get_current_hosts(), utilization_width, prefix.usage() * 100);
+        }
     }
     refresh();
 }
