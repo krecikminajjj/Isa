@@ -9,10 +9,13 @@ Prefix::Prefix(const std::string ip_address, const int prefix_length)
     : ip_address(std::move(ip_address)), prefix_length(prefix_length),
       current_hosts(0), usage_flag(false)
 {
-    this->max_hosts = (1 << (32 - this->prefix_length)) - 2; // Subtracting network and broadcast addresses
-    if (this->max_hosts < 0)
+    if (this->prefix_length == 0)
     {
-        this->max_hosts = 0;
+        this->max_hosts = UINT32_MAX - 1;
+    }
+    else
+    {
+        this->max_hosts = (1 << (32 - this->prefix_length)) - 2; // Subtracting network and broadcast addresses
     }
 }
 
@@ -38,7 +41,17 @@ bool Prefix::ip_belongs(const std::string ip)
 {
     uint32_t ip_num = Prefix::ip_to_int(ip);
     uint32_t prefix_num = Prefix::ip_to_int(this->ip_address);
-    uint32_t mask = ~((1 << (32 - this->prefix_length)) - 1); // Calculate netmask
+    uint32_t mask;
+
+    if (this->prefix_length == 0)
+    {
+        mask = 0;
+    }
+    else
+    {
+        mask = ~((1 << (32 - this->prefix_length)) - 1); // Calculate netmask
+    }
+
     uint32_t network_address = prefix_num & mask;
     uint32_t broadcast_address = network_address | ~mask;
 
@@ -55,7 +68,7 @@ void Prefix::increment_host_count()
     this->current_hosts++;
 }
 
-int Prefix::get_max_hosts() const
+u_int Prefix::get_max_hosts() const
 {
     return this->max_hosts;
 }

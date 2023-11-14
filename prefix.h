@@ -11,7 +11,7 @@ class Prefix
 private:
     std::string ip_address; // Base IP of the prefix
     int prefix_length;      // Length of the prefix
-    int max_hosts;          // Max hosts of the prefix
+    u_int max_hosts;          // Max hosts of the prefix
     int current_hosts;      // Number of current hosts
     bool usage_flag;        // % of usage
 
@@ -33,7 +33,7 @@ public:
     static uint32_t ip_to_int(const std::string ip);
 
     // Getters and setters as needed
-    int get_max_hosts() const;
+    u_int get_max_hosts() const;
     void set_max_hosts(const int value);
     std::string get_ip_address() const;
     int get_prefix_length() const;

@@ -47,6 +47,7 @@ void callback(u_char *args, const struct pcap_pkthdr *header, const u_char *pack
     (void)header;
     std::map<std::string, int> prefix_lines;
     int current_line = 1;
+    std::string addr_str;
 
     const uint8_t *dhcp_data;
 
@@ -71,6 +72,7 @@ void callback(u_char *args, const struct pcap_pkthdr *header, const u_char *pack
     // Get to DHCP options
     const uint8_t *dhcp_options = dhcp_data + 240;
     bool is_ack = false;
+    bool is_inf = false;
 
     // Look for DHCP ack in options
     while (*dhcp_options != 255)
@@ -83,27 +85,48 @@ void callback(u_char *args, const struct pcap_pkthdr *header, const u_char *pack
             is_ack = true;
             break;
         }
+        if (option_code == 53 && *dhcp_options == 8) // Check for DHCP ACK
+        {
+            is_inf = true;
+            break;
+        }
         dhcp_options += option_length; // Skip over this option's data
     }
 
-    // If it's not a DHCP ACK, skip the rest of this iteration and await next callback
-    if (!is_ack)
+    // If it's not a DHCP ACK or DHCP INF, skip the rest of this iteration and await next callback
+    if (is_ack)
+    {
+        // Extract yiaddr
+        const uint8_t *yiaddr_ptr = dhcp_data + 16;
+
+        // Converting yiaddr to string
+        for (int i = 0; i < 4; ++i)
+        {
+            addr_str += std::to_string(yiaddr_ptr[i]); // Convert the byte to a string
+            if (i < 3)
+            {
+                addr_str += "."; // Insert dot between octets
+            }
+        }
+    }
+    else if (is_inf)
+    {
+        // Extract caddr
+        const uint8_t *caddr_ptr = dhcp_data + 12;
+
+        // Converting caddr to string
+        for (int i = 0; i < 4; ++i)
+        {
+            addr_str += std::to_string(caddr_ptr[i]); // Convert the byte to a string
+            if (i < 3)
+            {
+                addr_str += "."; // Insert dot between octets
+            }
+        }
+    }
+    else
     {
         return;
-    }
-
-    // Extract yiaddr
-    const uint8_t *yiaddr_ptr = dhcp_data + 16;
-
-    // Converting yiaddr to string
-    std::string yiaddr_str;
-    for (int i = 0; i < 4; ++i)
-    {
-        yiaddr_str += std::to_string(yiaddr_ptr[i]); // Convert the byte to a string
-        if (i < 3)
-        {
-            yiaddr_str += "."; // Insert dot between octets
-        }
     }
 
     // Sort by prefix length (not max hosts) - smaller lengths first
@@ -111,17 +134,17 @@ void callback(u_char *args, const struct pcap_pkthdr *header, const u_char *pack
               { return a.get_prefix_length() < b.get_prefix_length(); });
 
     // Skip 0.0.0.0 address
-    if (yiaddr_str != "0.0.0.0")
+    if (addr_str != "0.0.0.0")
     {
         // If IP was not seen yet it will be added to seen_ips
-        if (std::find(seen_ips.begin(), seen_ips.end(), yiaddr_str) == seen_ips.end())
+        if (std::find(seen_ips.begin(), seen_ips.end(), addr_str) == seen_ips.end())
         {
-            seen_ips.push_back(yiaddr_str);
+            seen_ips.push_back(addr_str);
             // Check if the IP belongs in any prefix
             for (Prefix &prefix : ip_prefixes)
             {
                 // If it belongs the host count will be incemented
-                if (prefix.ip_belongs(yiaddr_str))
+                if (prefix.ip_belongs(addr_str))
                 {
                     prefix.increment_host_count();
 
@@ -161,7 +184,7 @@ void callback(u_char *args, const struct pcap_pkthdr *header, const u_char *pack
         move(prefix_lines[prefix_str], 0);
         if (prefix.usage() < 0.5)
         {
-            printw("%-*s %*d %*d %*.2f%%\n", ip_prefix_width, prefix_str.c_str(), max_hosts_width, prefix.get_max_hosts(), allocated_width, prefix.get_current_hosts(), utilization_width, prefix.usage() * 100);
+            printw("%-*s %*u %*d %*.2f%%\n", ip_prefix_width, prefix_str.c_str(), max_hosts_width, prefix.get_max_hosts(), allocated_width, prefix.get_current_hosts(), utilization_width, prefix.usage() * 100);
         }
         else
         {
