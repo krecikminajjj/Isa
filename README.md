@@ -15,24 +15,24 @@ dhcp-stats is a utility designed to listen for DHCP packets on a given interface
 ### Input:
 dhcp-stats -i eth0 192.168.1.0/24
 ### Output:
-IP-Prefix             Max-hosts  Allocated addresses  Utilization
-192.168.1.0/24              254                    5         1.97%
+IP-Prefix             Max-hosts  Allocated addresses  Utilization  
+192.168.1.0/24              254                    5         1.97%  
 
 ## From file
 ### Input:
 dhcp-stats -r dhcp.pcap 192.168.1.0/24
 ### Output:
-IP-Prefix             Max-hosts  Allocated addresses  Utilization
-192.168.1.0/24              254                    5         1.97%
+IP-Prefix             Max-hosts  Allocated addresses  Utilization  
+192.168.1.0/24              254                    5         1.97%  
 Press any key to exit...
 
 # Files:
-dhcp-stats.cpp
-input_check.cpp
-input_check.h
-prefix.cpp
-prefix,h
-README.md
-Makefile
-manual.pdf
-dgcp-stats.1
+dhcp-stats.cpp  
+input_check.cpp  
+input_check.h  
+prefix.cpp  
+prefix.h  
+README.md  
+Makefile  
+manual.pdf  
+dgcp-stats.1  
