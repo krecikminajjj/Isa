@@ -17,6 +17,7 @@ dhcp-stats -i eth0 192.168.1.0/24
 ### Output:
 IP-Prefix             Max-hosts  Allocated addresses  Utilization  
 192.168.1.0/24              254                    5         1.97%  
+Press CTRL-C to exit...
 
 ## From file
 ### Input:
@@ -24,7 +25,7 @@ dhcp-stats -r dhcp.pcap 192.168.1.0/24
 ### Output:
 IP-Prefix             Max-hosts  Allocated addresses  Utilization  
 192.168.1.0/24              254                    5         1.97%  
-Press any key to exit...
+Press CTRL-C to exit...
 
 # Files:
 dhcp-stats.cpp  
