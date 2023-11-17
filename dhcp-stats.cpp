@@ -370,8 +370,7 @@ int main(int argc, char **argv)
     // Free the compiled filter.
     pcap_freecode(&fp);
 
-    // Notify user to press any key to terminate the program.
-    printw("Press any key to exit...");
+    // If -r is finished wait
     getch();
 
     // Clean up: Close the descriptor and the ncurses window.

@@ -28,26 +28,7 @@ dhcp-stats --interface eth0 192.168.1.0/24
 dhcp-stats -r /path/to/file.pcap 192.168.1.0/24
 
 .IP
-dhcp-stats --read /path/to/file.pcap 192.168.1.0/24
-.SH EXAMPLE OUTPUT
-.IP
-When parsing from a pcap file, the output will display statistics as follows:
-.IP
-"IP-Prefix             Max-hosts  Allocated addresses  Utilization"
-.IP
-"192.168.1.0/24              254                    5         1.97%"
-.IP
-"Press any key to exit..."
-.IP
-In cases where a prefix's usage exceeds 50%, a warning is displayed:
-.IP
-"IP-Prefix             Max-hosts  Allocated addresses  Utilization"
-.IP
-"192.168.1.0/24              254                  128        50.39% exceeded 50% of allocations!"
-.IP
-"Press any key to exit..."
-.IP
-When listening on an interface, the output will display statistics as follows:
+When listening on an interface or parsing from a pcap file, the output will display statistics as follows:
 .IP
 "IP-Prefix             Max-hosts  Allocated addresses  Utilization"
 .IP
