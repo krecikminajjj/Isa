@@ -5,7 +5,7 @@ dhcp-stats \- a tool for processing DHCP packets and generating statistics from 
 .B dhcp-stats
 [\fB-r, --read\fR <filename>] [\fB-i, --interface\fR <interface-name> ...] <ip-prefix> [<ip-prefix> ...] [\fB-h, --help\fR]
 .SH DESCRIPTION
-\fBdhcp-stats\fR is a utility designed to listen for DHCP packets on a given interface or parse them from a pcap file. It allows users to specify one or more IP prefixes to filter the packets and create statistics based on how many IP addresses are allocated to a given prefix. If it is filled by more than 50%, it logs it into the syslog.
+\fBdhcp-stats\fR is a utility designed to listen for DHCP packets on a given interface or parse them from a pcap file. It allows users to specify one or more IP prefixes to filter the packets and create statistics based on how many IP addresses are allocated to a given prefix. If it is filled by more than 50%, it logs it into the syslog and gives a warning in ncurses window.
 .SH OPTIONS
 .TP
 \fB-r, --read\fR <filename>
@@ -23,14 +23,44 @@ dhcp-stats -i eth0 192.168.1.0/24
 
 .IP
 dhcp-stats --interface eth0 192.168.1.0/24
-
 .B Parsing from a pcap file:
 .IP
 dhcp-stats -r /path/to/file.pcap 192.168.1.0/24
 
 .IP
 dhcp-stats --read /path/to/file.pcap 192.168.1.0/24
-.SH SEE ALSO
-pcap(3), dhcp(4)
+.SH EXAMPLE OUTPUT
+.IP
+When parsing from a pcap file, the output will display statistics as follows:
+.IP
+"IP-Prefix             Max-hosts  Allocated addresses  Utilization"
+.IP
+"192.168.1.0/24              254                    5         1.97%"
+.IP
+"Press any key to exit..."
+.IP
+In cases where a prefix's usage exceeds 50%, a warning is displayed:
+.IP
+"IP-Prefix             Max-hosts  Allocated addresses  Utilization"
+.IP
+"192.168.1.0/24              254                  128        50.39% exceeded 50% of allocations!"
+.IP
+"Press any key to exit..."
+.IP
+When listening on an interface, the output will display statistics as follows:
+.IP
+"IP-Prefix             Max-hosts  Allocated addresses  Utilization"
+.IP
+"192.168.1.0/24              254                    5         1.97%"
+.IP
+"Press CTRL-C to exit..."
+.IP
+In cases where a prefix's usage exceeds 50%, a warning is displayed:
+.IP
+"IP-Prefix             Max-hosts  Allocated addresses  Utilization"
+.IP
+"192.168.1.0/24              254                  128        50.39% exceeded 50% of allocations!"
+.IP
+"Press CTRL-C to exit..."
 .SH AUTHORS
 Written by Patrik Potancok.

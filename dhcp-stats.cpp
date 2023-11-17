@@ -112,12 +112,12 @@ void callback(u_char *args, const struct pcap_pkthdr *header, const u_char *pack
     else if (is_inf)
     {
         // Extract caddr
-        const uint8_t *caddr_ptr = dhcp_data + 12;
+        const uint8_t *ciaddr_ptr = dhcp_data + 12;
 
         // Converting caddr to string
         for (int i = 0; i < 4; ++i)
         {
-            addr_str += std::to_string(caddr_ptr[i]); // Convert the byte to a string
+            addr_str += std::to_string(ciaddr_ptr[i]); // Convert the byte to a string
             if (i < 3)
             {
                 addr_str += "."; // Insert dot between octets
@@ -182,7 +182,7 @@ void callback(u_char *args, const struct pcap_pkthdr *header, const u_char *pack
         }
 
         move(prefix_lines[prefix_str], 0);
-        if (prefix.usage() < 0.5)
+        if (prefix.usage() <= 0.5)
         {
             printw("%-*s %*u %*d %*.2f%%\n", ip_prefix_width, prefix_str.c_str(), max_hosts_width, prefix.get_max_hosts(), allocated_width, prefix.get_current_hosts(), utilization_width, prefix.usage() * 100);
         }
@@ -191,6 +191,11 @@ void callback(u_char *args, const struct pcap_pkthdr *header, const u_char *pack
             printw("%-*s %*d %*d %*.2f%% exceeded 50%% of allocations!\n", ip_prefix_width, prefix_str.c_str(), max_hosts_width, prefix.get_max_hosts(), allocated_width, prefix.get_current_hosts(), utilization_width, prefix.usage() * 100);
         }
     }
+
+    move(current_line, 0);
+    clrtoeol();
+    printw("Press CTRL-C to exit...");
+
     refresh();
 }
 
